@@ -1,0 +1,29 @@
+name: Check, build and deploy
+on:
+  push:
+    branches: [main]
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  check-build-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - run: yarn
+      - run: yarn format:check
+      - run: yarn lint:check
+      - run: yarn lint:css:check
+      - run: yarn build
+        env:
+          VITE_ORIGIN_TRIAL_PIP: ${{ vars.VITE_ORIGIN_TRIAL_PIP }}
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: yarn deploy ${{ vars.S3_BUCKET_NAME }}
